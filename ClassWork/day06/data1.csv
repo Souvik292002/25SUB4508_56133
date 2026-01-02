@@ -1,0 +1,6 @@
+id,created,amount,currency,description,customer
+1,2025-12-01,100,USD,Payment,Bhima1
+2,2025-12-02,101,EUR,Payment,Bhima2
+3,2025-12-03,102,INR,Payment,Bhima3
+4,2025-12-04,200,GBP,Payment,Bhima4
+5|2025-12-05|300|USD|Payment|Bhima5

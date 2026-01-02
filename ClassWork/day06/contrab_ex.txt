@@ -1,0 +1,12 @@
+crontab usage
+
+
+* * * * * cmd_to_execute
+
+* - Min 0-59
+* - Hour 0-23
+* - Day of Month 1-31
+* - Month 1-12
+* - Day of Week 0-6
+
+

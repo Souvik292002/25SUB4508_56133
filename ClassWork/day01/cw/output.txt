@@ -1,0 +1,18 @@
+total 16
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Assignment
+drwxrwxr-x 4 student student 4096 Dec 16 15:57 Classwork
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Materials
+-rw-rw-r-- 1 student student 1943 Dec 15 12:43 output1.txt
+-rw-rw-r-- 1 student student    0 Dec 16 17:31 output.txt
+total 20
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Assignment
+drwxrwxr-x 4 student student 4096 Dec 16 15:57 Classwork
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Materials
+-rw-rw-r-- 1 student student 1943 Dec 15 12:43 output1.txt
+-rw-rw-r-- 1 student student  298 Dec 16 17:31 output.txt
+total 20
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Assignment
+drwxrwxr-x 4 student student 4096 Dec 16 15:57 Classwork
+drwxrwxr-x 2 student student 4096 Dec 14 13:24 Materials
+-rw-rw-r-- 1 student student 1943 Dec 15 12:43 output1.txt
+-rw-rw-r-- 1 student student  596 Dec 16 17:32 output.txt

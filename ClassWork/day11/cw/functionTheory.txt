@@ -1,0 +1,97 @@
+/*
+User-def functions:
+
+r_dt functionName(dt input args)
+{
+    //body of the function
+    return value-> r_dt
+}
+
+stack frames are generated
+
+1. nameFunction-> address of the function
+2. address of local variable
+3. address of set of inst 
+4. return add (value) 
+
+
+1. decalre prototype of the function (there is no body of the function)
+2. define the function
+
+
+dec of function: prototyping of function (signature)
+
+int addition(int, int); -> user def header files
+
+def. of function: => .c/.cpp files
+
+int addition(int v1, int v2)
+{
+    //local varis
+    int sum=0;
+
+    sum = v1+v2;
+
+    return sum;
+}
+
+
+
+
+
+execute function/calling a functon
+int res = addition(10,20); =>calling a fucntion
+
+
+types of function:
+1. with no return and no input args
+    Ex: 
+        void display();
+
+        void display()
+        {
+            printf("\nHello");
+        }
+
+2. with return and no input args
+    int func();
+
+    int func(){
+        int ret=0;
+        ret = 101 % 5;
+
+        return ret;
+    }
+
+3. with return and input args
+
+    int addition(int, int);
+
+    int addition(int v1, int v2)
+    {
+        //local varis
+        int sum=0;
+
+        sum = v1+v2;
+
+        return sum;
+    }
+
+
+
+
+4. with no return and with input args
+
+    void disp(int);
+
+    void disp(int v)
+    {
+        for(int i=0;i<v;i++)
+            printf("=");
+        printf("\n");
+    }
+
+
+*/
+
+

@@ -1,0 +1,84 @@
+int a=10
+Contents of 2002 => 10
+Contents of a => 10
+
+contentof(2002) => 10
+contentof(&vName)=>10
+contentof => * - dereference the ptr
+
+
+dec:
+dt *namePtr;
+
+ex:
+
+    int *ptr;
+
+Note: pointer does not belong to any data type
+its a void type and which points to a address(RAM)
+
+void *ptr;
+
+
+int a=10; // address of/BA a = 2000
+char name[20] = "bhima";
+int *ptr = &a; 
+
+ptr = &name[0];
+
+a=>2000
+ptr = &a
+*ptr = 22;
+ptr => 2004
+
+contentsof(2004)=>2000
+conttentsof(contentsof(2000))=>10
+
+thumb rules of pointer
+1. arr to pointer
+    a[]  <=> *a 
+
+2. &* => nullify each other
+    &*a <=> a
+
+
+assignment 1: wap to sort the element of array using ptr expr
+     store elements in array -> ptr expr
+     access elements in array -> ptr expr
+
+
+types of pointer
+1. wild pointer
+    int *ptr; => it can point to anywhere (very dangerous)
+2. null pointer
+    int *ptr = NULL; //it is pointing to NULL (this is safe)
+    char *ptrChr = NULL; 
+3. dangling pointer:
+        int *fun()
+        {
+            static int r=10;  // avoid d pointer situation by using static
+            printf("\nr=%d",r);
+            return (&r);
+        }
+
+        int main()
+        {
+            int *ptr=fun(); // the pointer is pointing to an address
+                            // which has lost its scope
+                            // this is called as dangling pointer
+            printf("\n%d", *ptr);
+            *ptr = 100;
+            ptr = fun();
+
+        }
+
+4. void pointer / generic pointer
+    void *ptr = NULL; => pointing to nothing datatype
+                        this tyoe of pointer can be used to 
+                        point to any datatype
+            
+    ex:
+    int *iPtr = (int *)malloc(sizeof(int));
+    char *cPtr = (char *)malloc(sizeof(char)*20);
+    void *vPtr = iPtr; => this is pointing to int dt
+    vPtr = cPtr; => now it is made to point to char dt
