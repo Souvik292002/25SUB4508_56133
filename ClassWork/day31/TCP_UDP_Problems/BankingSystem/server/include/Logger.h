@@ -4,16 +4,10 @@
 #include <string>
 #include <mutex>
 
-/*
- Logger:
- - Handles persistent logging
- - Thread-safe
- - Used for invalid access attempts
-*/
 class Logger {
 private:
     std::mutex logMutex;
-    std::string logFilePath;
+    std::string logFile;
 
 public:
     explicit Logger(const std::string& filePath);

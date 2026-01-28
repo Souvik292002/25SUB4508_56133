@@ -6,52 +6,69 @@
 #include "../include/AccountManager.h"
 #include "../include/Logger.h"
 
-#define SERVER_PORT 8080
+#define PORT 8080
 
-/*
- TCP is used because banking operations are CRITICAL.
- Reliability, ordering, and guaranteed delivery
- outweigh the overhead.
-*/
-
-// Paths are relative to project ROOT (not bin/)
-AccountManager accountManager("server/data/accounts.txt");
+AccountManager manager("server/data/accounts.txt");
 Logger logger("server/logs/server.log");
 
 void handleClient(int clientSocket) {
-    int accountNumber, pin;
+    while (true) {
+        int accNo, pin;
+        recv(clientSocket, &accNo, sizeof(accNo), 0);
+        recv(clientSocket, &pin, sizeof(pin), 0);
 
-    recv(clientSocket, &accountNumber, sizeof(accountNumber), 0);
-    recv(clientSocket, &pin, sizeof(pin), 0);
+        double balance;
+        if (!manager.authenticate(accNo, pin, balance)) {
+            logger.log("Authentication failed for Account: " +
+                       std::to_string(accNo));
+            double err = AUTH_FAILED;
+            send(clientSocket, &err, sizeof(err), 0);
+            continue;
+        }
 
-    double balance;
-    bool valid = accountManager.verifyAccount(accountNumber, pin, balance);
-
-    if (valid) {
         send(clientSocket, &balance, sizeof(balance), 0);
-    } else {
-        logger.log("Invalid login attempt for Account: " +
-                   std::to_string(accountNumber));
-        double error = -1;
-        send(clientSocket, &error, sizeof(error), 0);
-    }
 
-    close(clientSocket);
+        int choice;
+        double amount;
+        recv(clientSocket, &choice, sizeof(choice), 0);
+        recv(clientSocket, &amount, sizeof(amount), 0);
+
+        double updatedBalance;
+        int status = manager.processTransaction(
+            accNo,
+            static_cast<TransactionType>(choice),
+            amount,
+            updatedBalance
+        );
+
+        if (status == 0) {
+            send(clientSocket, &updatedBalance, sizeof(updatedBalance), 0);
+        } else {
+            if (status == INSUFFICIENT_FUNDS)
+                logger.log("Insufficient funds | Account: " +
+                           std::to_string(accNo));
+            else if (status == INVALID_CHOICE)
+                logger.log("Invalid transaction choice | Account: " +
+                           std::to_string(accNo));
+
+            double err = status;
+            send(clientSocket, &err, sizeof(err), 0);
+        }
+    }
 }
 
 int main() {
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-    sockaddr_in serverAddr{};
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(SERVER_PORT);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = INADDR_ANY;
 
-    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+    bind(serverSocket, (sockaddr*)&addr, sizeof(addr));
     listen(serverSocket, 10);
 
-    std::cout << "Bank Server running on port "
-              << SERVER_PORT << std::endl;
+    std::cout << "Bank Server running on port " << PORT << std::endl;
 
     while (true) {
         int clientSocket = accept(serverSocket, nullptr, nullptr);
