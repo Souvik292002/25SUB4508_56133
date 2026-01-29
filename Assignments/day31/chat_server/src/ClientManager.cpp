@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <algorithm>
-
+#include <sys/socket.h>
 void ClientManager::addClient(int fd) {
     clients.push_back(fd);
     printInfo("New client connected. FD: " + std::to_string(fd));
