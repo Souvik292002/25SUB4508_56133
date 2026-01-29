@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include <unistd.h>
 #include <cstring>
+#include <algorithm>
 
 void ClientManager::addClient(int fd) {
     clients.push_back(fd);

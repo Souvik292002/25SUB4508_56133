@@ -6,7 +6,8 @@
 #include <sys/select.h>
 #include <cstring>
 
-Server::Server(int port) : port(port), serverFd(-1) {}
+Server::Server(int port) : serverFd(-1), port(port) {}
+
 
 void Server::start() {
     sockaddr_in serverAddr{};
@@ -66,7 +67,7 @@ void Server::start() {
                 }
                 // Existing client message
                 else {
-                    char buffer[1024];
+                    char buffer[1025];
                     int bytes = recv(fd, buffer, sizeof(buffer), 0);
 
                     if (bytes <= 0) {
