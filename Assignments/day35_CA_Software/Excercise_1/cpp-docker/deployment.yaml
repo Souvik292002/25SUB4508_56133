@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpp-microservice-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpp-microservice
+  template:
+    metadata:
+      labels:
+        app: cpp-microservice
+    spec:
+      containers:
+      - name: cpp-container
+        image: cpp-microservice
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
