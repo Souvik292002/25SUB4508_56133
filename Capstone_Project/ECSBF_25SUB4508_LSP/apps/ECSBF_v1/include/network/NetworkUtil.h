@@ -1,6 +1,10 @@
 #ifndef NETWORK_UTIL_H
 #define NETWORK_UTIL_H
 
+#pragma once
+#include <cstddef>
+#include <string>
+#define ECSBF_BUFFER_SIZE 1024
 /*
  * ============================================================
  *  File: NetworkUtil.h
@@ -21,7 +25,7 @@
  * ============================================================
  */
 
-#include <string>
+
 
 /*
  * ------------------------------------------------------------

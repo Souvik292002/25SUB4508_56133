@@ -1,29 +1,24 @@
 #include <Logger.h>
-
-#include <iostream>
 #include <fstream>
 #include <chrono>
-#include <ctime>
 #include <iomanip>
-#include <sstream>
 #include <filesystem>
 #include <mutex>
+#include <sstream>
 
-/*
- *  Thread-safe file logging mutex
- */
-static std::mutex logMutex;
+std::mutex logMutex;
 
-/*
- *  Generate formatted timestamp
- */
-static std::string getTimestamp()
-{
+namespace fs = std::filesystem;
+
+/* ============================================================
+ *  Helper: Get Current Timestamp
+ * ============================================================ */
+std::string currentTimestamp() {
+
     auto now = std::chrono::system_clock::now();
-    std::time_t nowTime =
-        std::chrono::system_clock::to_time_t(now);
+    auto time = std::chrono::system_clock::to_time_t(now);
 
-    std::tm* tmPtr = std::localtime(&nowTime);
+    std::tm* tmPtr = std::localtime(&time);
 
     std::ostringstream oss;
     oss << std::put_time(tmPtr, "%Y-%m-%d %H:%M:%S");
@@ -31,50 +26,103 @@ static std::string getTimestamp()
     return oss.str();
 }
 
-/*
- * Console Logs
- */
-void Logger::info(const std::string& msg)
-{
-    std::cout << "[INFO] " << msg << std::endl;
-}
-
-void Logger::warning(const std::string& msg)
-{
-    std::cout << "[WARN] " << msg << std::endl;
-}
-
-void Logger::error(const std::string& msg)
-{
-    std::cout << "[ERROR] " << msg << std::endl;
-}
-
-/*
- * ============================================================
- *  Per-Node Log File Writer
- * ============================================================
- *  - Auto creates logs directory
- *  - Creates file per node
- *  - Appends logs
- *  - Adds timestamp
- *  - Thread safe
- * ============================================================
- */
-void Logger::logToNode(const std::string& nodeId,
-                       const std::string& message)
-{
+/* ============================================================
+ *  Console Logs
+ * ============================================================ */
+void Logger::info(const std::string& msg) {
     std::lock_guard<std::mutex> lock(logMutex);
 
-    // Create logs folder if not exists
-    std::filesystem::create_directory("logs");
+    fs::create_directories("logs");
 
-    std::string filename = "logs/" + nodeId + ".log";
+    std::ofstream file("logs/engine.log", std::ios::app);
 
-    std::ofstream file(filename, std::ios::app);
-
-    if (file.is_open())
-    {
-        file << "[" << getTimestamp() << "] "
-             << message << std::endl;
+    if (file.is_open()) {
+        file << "[" << currentTimestamp() << "] "
+             << "[INFO] " << msg << std::endl;
     }
 }
+
+void Logger::warning(const std::string& msg) {
+    std::lock_guard<std::mutex> lock(logMutex);
+
+    fs::create_directories("logs");
+
+    std::ofstream file("logs/engine.log", std::ios::app);
+
+    if (file.is_open()) {
+        file << "[" << currentTimestamp() << "] "
+             << "[WARN] " << msg << std::endl;
+    }
+}
+
+void Logger::error(const std::string& msg) {
+    std::lock_guard<std::mutex> lock(logMutex);
+
+    fs::create_directories("logs");
+
+    std::ofstream file("logs/engine.log", std::ios::app);
+
+    if (file.is_open()) {
+        file << "[" << currentTimestamp() << "] "
+             << "[ERROR] " << msg << std::endl;
+    }
+}
+
+
+/* ============================================================
+ *  🔥 Per Node File Logging
+ * ============================================================ */
+void Logger::logToNode(const std::string& nodeId,
+                       const std::string& msg) {
+
+    std::lock_guard<std::mutex> lock(logMutex);
+
+    fs::create_directories("logs");
+
+    std::string fileName = "logs/" + nodeId + ".log";
+
+    std::ofstream file(fileName, std::ios::app);
+
+    if (file.is_open()) {
+        file << "[" << currentTimestamp() << "] "
+             << msg << std::endl;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

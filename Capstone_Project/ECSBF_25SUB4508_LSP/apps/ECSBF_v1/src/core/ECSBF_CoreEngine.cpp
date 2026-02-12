@@ -1,11 +1,15 @@
 #include <ECSBF_CoreEngine.h>
 #include <Logger.h>
 #include <NetworkUtil.h>
-#include <CryptoUtil.h>
 
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <thread>
+#include <CryptoUtil.h>
+#include <unordered_map>
+#include <string>
+#include <iostream>
+#include <mutex>
 
 /*
  * ============================================================
@@ -20,198 +24,244 @@ ECSBF_CoreEngine::ECSBF_CoreEngine(int port)
  * ============================================================
  *  Start ECSBF Core Engine
  * ============================================================
- */
-void ECSBF_CoreEngine::startEngine() {
-
+ */void ECSBF_CoreEngine::startEngine() {
+    try{
     Logger::info("Starting ECSBF Engine...");
 
+    /* ================= SOCKET CREATION ================= */
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverSocket < 0) {
+        Logger::error("Socket creation failed");
+        return;
+    }
+    Logger::info("Server socket created successfully");
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
     serverAddr.sin_port = htons(port);
 
-    bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-    listen(serverSocket, 5);
+    if (bind(serverSocket,
+             (sockaddr*)&serverAddr,
+             sizeof(serverAddr)) < 0) {
 
-    Logger::info("ECSBF Engine listening on port " + std::to_string(port));
+        Logger::error("Bind failed");
+        close(serverSocket);
+        return;
+    }
+    Logger::info("Bind successful on port " + std::to_string(port));
 
+    if (listen(serverSocket, 5) < 0) {
+        Logger::error("Listen failed");
+        close(serverSocket);
+        return;
+    }
+    Logger::info("Server now listening for connections");
+
+    /* ================= ACCEPT LOOP ================= */
     while (true) {
 
         int clientSock = accept(serverSocket, nullptr, nullptr);
+        if (clientSock < 0) {
+            Logger::error("Accept failed");
+            continue;
+        }
 
+        Logger::info("New client connection accepted");
+
+        /* ========== SINGLE THREAD PER CLIENT ========== */
         std::thread([this, clientSock]() {
 
-            std::string request = NetworkUtil::receivePacket(clientSock);
+            try {
 
-            /* =================================================
-             *  REGISTRATION WORKFLOW
-             * ================================================= */
-            if (request.find("REGISTER") == 0) {
+                /* ----------- RECEIVE FIRST REQUEST ----------- */
+                std::string request =
+                    NetworkUtil::receivePacket(clientSock);
 
-                size_t first  = request.find('|');
-                size_t second = request.find('|', first + 1);
+                /* ================= REGISTER ================= */
+                if (request.find("REGISTER") == 0) {
 
-                std::string nodeId = request.substr(first + 1, second - first - 1);
-                std::string pass   = request.substr(second + 1);
+                    size_t first  = request.find('|');
+                    size_t second = request.find('|', first + 1);
 
-                registry.registerNode(NodeIdentity(nodeId, pass));
-                NetworkUtil::sendPacket(clientSock, "REGISTER_SUCCESS");
+                    std::string nodeId =
+                        request.substr(first + 1, second - first - 1);
+                    std::string pass =
+                        request.substr(second + 1);
 
-                close(clientSock);
-                return;
-            }
+                    registry.registerNode(NodeIdentity(nodeId, pass));
+                    NetworkUtil::sendPacket(clientSock, "REGISTER_SUCCESS");
 
-            /* =================================================
-             *  LOGIN WORKFLOW
-             * ================================================= */
-            if (request.find("LOGIN") == 0) {
+                    Logger::info("New node registered: " + nodeId);
 
-                size_t first  = request.find('|');
-                size_t second = request.find('|', first + 1);
-
-                std::string nodeId = request.substr(first + 1, second - first - 1);
-                std::string pass   = request.substr(second + 1);
-
-                if (!registry.authenticate(nodeId, pass)) {
-                    NetworkUtil::sendPacket(clientSock, "LOGIN_FAILED");
                     close(clientSock);
                     return;
                 }
 
-                /* Assign Numeric Node ID */
-                if (nodeNumericId.find(nodeId) == nodeNumericId.end()) {
-                    clientCounter++;
-                    nodeNumericId[nodeId] = clientCounter;
-                }
+                /* ================= LOGIN ================= */
+                if (request.find("LOGIN") == 0) {
 
-                int numericId = nodeNumericId[nodeId];
-                Logger::info("Node-" + std::to_string(numericId) + " connected");
+                    size_t first  = request.find('|');
+                    size_t second = request.find('|', first + 1);
 
-                /* Persistent Session Restore / Create */
-                std::string key;
-                auto it = sessions.find(nodeId);
+                    std::string nodeId =
+                        request.substr(first + 1, second - first - 1);
+                    std::string pass =
+                        request.substr(second + 1);
 
-                if (it != sessions.end()) {
-                    it->second.restore();
-                    key = it->second.getKey();
-                    Logger::info("Restoring existing session for Node-" +
-                                 std::to_string(numericId));
+                    if (!registry.authenticate(nodeId, pass)) {
+                        NetworkUtil::sendPacket(clientSock, "LOGIN_FAILED");
+                        Logger::warning("Login failed for node: " + nodeId);
+                        close(clientSock);
+                        return;
+                    }
+
+                    /* Assign numeric ID */
+                    if (nodeNumericId.find(nodeId) == nodeNumericId.end()) {
+                        clientCounter++;
+                        nodeNumericId[nodeId] = clientCounter;
+                    }
+
+                    int numericId = nodeNumericId[nodeId];
+
+                    Logger::info("Node-" +
+                        std::to_string(numericId) + " connected");
+
+                    /* Session management */
+                    auto it = sessions.find(nodeId);
+                    if (it != sessions.end())
+                        it->second.restore();
+                    else
+                        sessions.emplace(nodeId,
+                            Session("sess_" + nodeId, nodeId));
+
+                    socketToNode[clientSock] = nodeId;
+
+                    /* Generate session key ONCE */
+                    std::string sessionKey =
+                        CryptoUtil::generateKey();
+
+                    sessionKeys[nodeId] = sessionKey;
+
+                    NetworkUtil::sendPacket(
+                        clientSock,
+                        "LOGIN_SUCCESS|" + sessionKey
+                    );
+
+                    Logger::info("Session key generated for Node-" +
+                        std::to_string(numericId));
                 }
                 else {
-                    key = CryptoUtils::generateKey();
-
-                    sessions.emplace(nodeId,
-                        Session("sess_" + nodeId, nodeId, key));
-
-                    Logger::info("Creating new session for Node-" +
-                                 std::to_string(numericId));
+                    close(clientSock);
+                    return;
                 }
 
-                socketToNode[clientSock] = nodeId;
+                /* ================= MESSAGE LOOP ================= */
+                while (true) {
 
-                /* Send encryption key to client */
-                NetworkUtil::sendPacket(clientSock,
-                    "LOGIN_SUCCESS|" + key);
-            }
-            else {
-                close(clientSock);
-                return;
-            }
+                    std::string encryptedMsg =
+                        NetworkUtil::receivePacket(clientSock);
 
-            /* =================================================
-             *  MESSAGE BROADCAST LOOP (ENCRYPTION ENABLED)
-             * ================================================= */
-            while (true) {
+                    if (encryptedMsg.empty())
+                        break;
 
-                std::string encryptedMsg =
-                    NetworkUtil::receivePacket(clientSock);
+                    std::string sender =
+                        socketToNode[clientSock];
 
-                if (encryptedMsg.empty())
-                    break;
+                    if (sessionKeys.find(sender) == sessionKeys.end()) {
+                        Logger::error("Session key missing for " + sender);
+                        break;
+                    }
 
-                auto sockIt = socketToNode.find(clientSock);
-                if (sockIt == socketToNode.end())
-                    break;
+                    std::string senderKey =
+                        sessionKeys[sender];
 
-                std::string sender = sockIt->second;
-                int numericId = nodeNumericId[sender];
+                    std::string decrypted =
+                        CryptoUtil::decrypt(encryptedMsg, senderKey);
 
-                auto senderIt = sessions.find(sender);
-if (senderIt == sessions.end())
-    break;
+                    int numericId =
+                        nodeNumericId[sender];
 
-std::string senderKey = senderIt->second.getKey();
+                    std::string finalMessage =
+                        "Packet sent by Node-" +
+                        std::to_string(numericId) +
+                        ": " + decrypted;
 
+                    Logger::logToNode(sender,
+                        "Encrypted: " + encryptedMsg);
+                    Logger::logToNode(sender,
+                        "Decrypted: " + decrypted);
 
-                /* Decrypt message from sender */
-                std::string decryptedMsg =
-                    CryptoUtils::decrypt(encryptedMsg, senderKey);
+                    /* Broadcast */
+                    for (auto& [nodeId, session] : sessions) {
 
-                /* Log encrypted + decrypted */
-                Logger::logToNode(sender,
-                    "Encrypted: " + encryptedMsg);
+                        if (session.isActive() &&
+                            nodeId != sender &&
+                            sessionKeys.find(nodeId) != sessionKeys.end()) {
 
-                Logger::logToNode(sender,
-                    "Decrypted: " + decryptedMsg);
+                            std::string receiverKey =
+                                sessionKeys[nodeId];
 
-                /* Broadcast to other active nodes */
-                      /* Broadcast to all active sessions except sender */
-for (auto& [nodeId, session] : sessions) {
+                            std::string reEncrypted =
+                                CryptoUtil::encrypt(finalMessage,
+                                                    receiverKey);
 
-    if (session.isActive() && nodeId != sender) {
+                            for (auto& [sock, mappedNode] : socketToNode) {
+                                if (mappedNode == nodeId) {
+                                    NetworkUtil::sendPacket(sock, reEncrypted);
+                                    Logger::logToNode(nodeId,
+                                        "Received: " + finalMessage);
+                                }
+                            }
+                        }
+                    }
+                }
+/* ================= CLEANUP ================= */
 
-        std::string receiverKey = session.getKey();
+std::string disconnectedNode = "UNKNOWN";
 
-        /* Format message FIRST */
-        std::string formattedMsg =
-            "Packet sent by Node-" +
-            std::to_string(numericId) +
-            ": " + decryptedMsg;
+auto sockIt = socketToNode.find(clientSock);
 
-        /* Encrypt formatted message */
-        std::string reEncrypted =
-            CryptoUtils::encrypt(formattedMsg, receiverKey);
+if (sockIt != socketToNode.end()) {
 
-        for (auto& [sock, mappedNode] : socketToNode) {
+    disconnectedNode = sockIt->second;
 
-            if (mappedNode == nodeId) {
+    /* Remove session key */
+    sessionKeys.erase(disconnectedNode);
 
-                NetworkUtil::sendPacket(
-                    sock,
-                    reEncrypted
-                );
-            }
-        }
+    /* Invalidate session safely */
+    auto it = sessions.find(disconnectedNode);
+    if (it != sessions.end()) {
+        it->second.invalidate();
     }
+
+    /* Remove socket mapping */
+    socketToNode.erase(sockIt);
 }
+
+close(clientSock);
+
+Logger::info("Client disconnected: " + disconnectedNode);
+
             }
-
-            /* =================================================
-             *  CLEANUP
-             * ================================================= */
-            auto sockIt = socketToNode.find(clientSock);
-
-            if (sockIt != socketToNode.end()) {
-
-                std::string nodeId = sockIt->second;
-                int numericId = nodeNumericId[nodeId];
-
-                auto sessIt = sessions.find(nodeId);
-                if (sessIt != sessions.end()) {
-                    sessIt->second.invalidate();
-                }
-
-                socketToNode.erase(sockIt);
-
-                Logger::info("Node-" +
-                             std::to_string(numericId) +
-                             " disconnected");
+            catch (const std::exception& e) {
+                Logger::error(std::string("Thread exception: ") + e.what());
             }
-
-            close(clientSock);
+            catch (...) {
+                Logger::error("Unknown exception in client thread");
+            }
 
         }).detach();
+    }
+}
+catch (const std::exception& e) {
+        Logger::error(
+            "Engine fatal exception: " + std::string(e.what())
+        );
+    }
+    catch (...) {
+        Logger::error(
+            "Unknown fatal exception in engine"
+        );
     }
 }

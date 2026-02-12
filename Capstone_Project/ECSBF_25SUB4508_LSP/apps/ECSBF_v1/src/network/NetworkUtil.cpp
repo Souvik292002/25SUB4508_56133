@@ -74,7 +74,12 @@ void NetworkUtil::sendPacket(int sock, const std::string& data) {
  * ============================================================
  */
 std::string NetworkUtil::receivePacket(int sock) {
-    char buffer[1024] = {0};
-    recv(sock, buffer, sizeof(buffer), 0);
+    char buffer[ECSBF_BUFFER_SIZE] = {0};
+    ssize_t bytesReceived = recv(sock, buffer, sizeof(buffer) - 1 , 0);
+    // Logger::info("Bytes received: " + std::to_string(bytesReceived));
+    if(bytesReceived <= 0){
+        return "";
+    }
+    buffer[bytesReceived] = '\0';
     return std::string(buffer);
 }
