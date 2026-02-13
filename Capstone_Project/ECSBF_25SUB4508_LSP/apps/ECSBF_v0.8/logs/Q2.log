@@ -1,7 +1,0 @@
-[2026-02-11 17:44:15] Received: Packet sent by Node-1: hyy q2 and q3
-[2026-02-11 17:44:26] Encrypted: -:*b7n
-[2026-02-11 17:44:26] Decrypted: hyy q1
-[2026-02-11 17:44:34] Received: Packet sent by Node-3: hyy q2
-[2026-02-12 03:58:16] Received: Packet sent by Node-1: q1
-[2026-02-12 03:59:12] Encrypted: 4q
-[2026-02-12 03:59:12] Decrypted: q2

@@ -1,0 +1,44 @@
+include/core/ECSBF_CoreEngine.h:38:5: style: Class 'ECSBF_CoreEngine' has a constructor with 1 argument that is not explicit. [noExplicitConstructor]
+    ECSBF_CoreEngine(int port);
+    ^
+include/client/Client.h:91:10: style: inconclusive: Technically the member function 'Client::listenForMessages' can be const. [functionConst]
+    void listenForMessages();
+         ^
+src/client/Client.cpp:60:14: note: Technically the member function 'Client::listenForMessages' can be const.
+void Client::listenForMessages() {
+             ^
+include/client/Client.h:91:10: note: Technically the member function 'Client::listenForMessages' can be const.
+    void listenForMessages();
+         ^
+src/client/Client.cpp:132:23: style: C-style pointer casting [cstyleCast]
+        connect(sock, (sockaddr*)&addr, sizeof(addr));
+                      ^
+src/client/Client.cpp:195:22: style: Consider using std::any_of algorithm instead of a raw loop. [useStlAlgorithm]
+    if (!isalnum(c)) {   // allows only A-Z, a-z, 0-9
+                     ^
+src/core/ECSBF_CoreEngine.cpp:16:19: warning: Member variable 'ECSBF_CoreEngine::serverSocket' is not initialized in the constructor. [uninitMemberVar]
+ECSBF_CoreEngine::ECSBF_CoreEngine(int port)
+                  ^
+src/core/ECSBF_CoreEngine.cpp:50:18: style: C-style pointer casting [cstyleCast]
+                 (sockaddr*)&serverAddr,
+                 ^
+include/logging/Logger.h:26:17: performance: inconclusive: Technically the member function 'Logger::getCurrentTimestamp' can be static (but you may consider moving to unnamed namespace). [functionStatic]
+    std::string getCurrentTimestamp();
+                ^
+src/logging/Logger.cpp:29:21: note: Technically the member function 'Logger::getCurrentTimestamp' can be static (but you may consider moving to unnamed namespace).
+std::string Logger::getCurrentTimestamp() {
+                    ^
+include/logging/Logger.h:26:17: note: Technically the member function 'Logger::getCurrentTimestamp' can be static (but you may consider moving to unnamed namespace).
+    std::string getCurrentTimestamp();
+                ^
+include/logging/Logger.h:27:17: performance: inconclusive: Technically the member function 'Logger::levelToString' can be static (but you may consider moving to unnamed namespace). [functionStatic]
+    std::string levelToString(LogLevel level);
+                ^
+src/logging/Logger.cpp:39:21: note: Technically the member function 'Logger::levelToString' can be static (but you may consider moving to unnamed namespace).
+std::string Logger::levelToString(LogLevel level) {
+                    ^
+include/logging/Logger.h:27:17: note: Technically the member function 'Logger::levelToString' can be static (but you may consider moving to unnamed namespace).
+    std::string levelToString(LogLevel level);
+                ^
+nofile:0:0: information: Active checkers: 172/592 (use --checkers-report=<filename> to see details) [checkersReport]
+
